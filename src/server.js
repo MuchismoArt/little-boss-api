@@ -102,3 +102,7 @@ app.post("/bookings", async (req, reply) => {
   BOOKINGS.push(booking);
   return booking;
 });
+// GET /bookings (debug: voir toutes les demandes)
+app.get("/bookings", async () => {
+  return { bookings: BOOKINGS };
+});
