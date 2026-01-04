@@ -2,7 +2,24 @@ import Fastify from "fastify";
 
 const app = Fastify({ logger: true });
 
-// Données fake (MVP) : on branchera la DB après
+/**
+ * CORS minimal (utile pour Flutter Web / tests navigateur)
+ */
+app.addHook("onSend", async (req, reply, payload) => {
+  reply.header("Access-Control-Allow-Origin", "*");
+  reply.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  reply.header("Access-Control-Allow-Headers", "Content-Type");
+  return payload;
+});
+
+// Répond aux requêtes OPTIONS (préflight)
+app.options("*", async (req, reply) => {
+  reply.code(204).send();
+});
+
+/**
+ * Données fake (MVP)
+ */
 const NANNIES = [
   {
     id: "n1",
@@ -11,7 +28,7 @@ const NANNIES = [
     yearsExp: 5,
     skills: ["bébé", "repas", "sorties"],
     hourlyRate: 12,
-    available: true
+    available: true,
   },
   {
     id: "n2",
@@ -20,7 +37,7 @@ const NANNIES = [
     yearsExp: 2,
     skills: ["devoirs", "jeux", "anglais"],
     hourlyRate: 10,
-    available: true
+    available: true,
   },
   {
     id: "n3",
@@ -29,39 +46,50 @@ const NANNIES = [
     yearsExp: 8,
     skills: ["nouveau-né", "montessori", "premiers secours"],
     hourlyRate: 15,
-    available: false
-  }
+    available: false,
+  },
 ];
 
+// Stockage temporaire en mémoire
+const BOOKINGS = [];
+
+/**
+ * Health check
+ */
 app.get("/health", async () => {
   return { ok: true, name: "little-boss-api" };
 });
 
-// GET /nannies?city=Paris&skill=anglais
+/**
+ * GET /nannies?city=Paris&skill=anglais
+ */
 app.get("/nannies", async (req) => {
   const { city, skill } = req.query ?? {};
 
-  let list = NANNIES.filter(n => n.available);
+  let list = NANNIES.filter((n) => n.available);
 
   if (city) {
-    list = list.filter(n => n.city.toLowerCase() === String(city).toLowerCase());
+    list = list.filter(
+      (n) => n.city.toLowerCase() === String(city).toLowerCase()
+    );
   }
+
   if (skill) {
     const s = String(skill).toLowerCase();
-    list = list.filter(n => n.skills.some(k => k.toLowerCase().includes(s)));
+    list = list.filter((n) =>
+      n.skills.some((k) => k.toLowerCase().includes(s))
+    );
   }
 
   return { nannies: list };
 });
 
-app.listen({
-  port: process.env.PORT ? Number(process.env.PORT) : 3000,
-  host: "0.0.0.0"
-});
-// GET /nannies/:id
+/**
+ * GET /nannies/:id
+ */
 app.get("/nannies/:id", async (req, reply) => {
   const { id } = req.params;
-  const nanny = NANNIES.find(n => n.id === id);
+  const nanny = NANNIES.find((n) => n.id === id);
 
   if (!nanny) {
     reply.code(404);
@@ -70,10 +98,18 @@ app.get("/nannies/:id", async (req, reply) => {
 
   return nanny;
 });
-// Stockage temporaire en mémoire
-const BOOKINGS = [];
 
-// POST /bookings
+/**
+ * POST /bookings
+ * Body JSON:
+ * {
+ *   "nannyId": "n1",
+ *   "familyName": "Famille Dupont",
+ *   "startAt": "2026-01-10T18:00:00",
+ *   "endAt": "2026-01-10T22:00:00",
+ *   "message": "..."
+ * }
+ */
 app.post("/bookings", async (req, reply) => {
   const { nannyId, familyName, startAt, endAt, message } = req.body || {};
 
@@ -82,7 +118,7 @@ app.post("/bookings", async (req, reply) => {
     return { error: "Missing required fields" };
   }
 
-  const nanny = NANNIES.find(n => n.id === nannyId);
+  const nanny = NANNIES.find((n) => n.id === nannyId);
   if (!nanny) {
     reply.code(404);
     return { error: "Nanny not found" };
@@ -96,13 +132,24 @@ app.post("/bookings", async (req, reply) => {
     endAt,
     message: message || "",
     status: "REQUESTED",
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
   };
 
   BOOKINGS.push(booking);
   return booking;
 });
-// GET /bookings (debug: voir toutes les demandes)
+
+/**
+ * GET /bookings (debug)
+ */
 app.get("/bookings", async () => {
   return { bookings: BOOKINGS };
+});
+
+/**
+ * Start server
+ */
+app.listen({
+  port: process.env.PORT ? Number(process.env.PORT) : 3000,
+  host: "0.0.0.0",
 });
