@@ -70,3 +70,35 @@ app.get("/nannies/:id", async (req, reply) => {
 
   return nanny;
 });
+// Stockage temporaire en mémoire
+const BOOKINGS = [];
+
+// POST /bookings
+app.post("/bookings", async (req, reply) => {
+  const { nannyId, familyName, startAt, endAt, message } = req.body || {};
+
+  if (!nannyId || !familyName || !startAt || !endAt) {
+    reply.code(400);
+    return { error: "Missing required fields" };
+  }
+
+  const nanny = NANNIES.find(n => n.id === nannyId);
+  if (!nanny) {
+    reply.code(404);
+    return { error: "Nanny not found" };
+  }
+
+  const booking = {
+    id: `b${BOOKINGS.length + 1}`,
+    nannyId,
+    familyName,
+    startAt,
+    endAt,
+    message: message || "",
+    status: "REQUESTED",
+    createdAt: new Date().toISOString()
+  };
+
+  BOOKINGS.push(booking);
+  return booking;
+});
