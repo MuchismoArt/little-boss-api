@@ -142,13 +142,28 @@ app.post("/bookings", async (req, reply) => {
 /**
  * GET /bookings (debug)
  */
-app.get("/bookings", async () => {
-  return { bookings: BOOKINGS };
+app.get("/bookings", async (req, reply) => {
+  const { familyName, nannyId, status } = req.query || {};
+
+  let results = [...BOOKINGS];
+
+  if (familyName) {
+    results = results.filter(
+      (b) => (b.familyName || "").toLowerCase() === String(familyName).toLowerCase()
+    );
+  }
+
+  if (nannyId) {
+    results = results.filter((b) => b.nannyId === nannyId);
+  }
+
+  if (status) {
+    results = results.filter((b) => b.status === status);
+  }
+
+  return { bookings: results };
 });
 
-/**
- * Start server
- */
 app.listen({
   port: process.env.PORT ? Number(process.env.PORT) : 3000,
   host: "0.0.0.0",
