@@ -58,3 +58,15 @@ app.listen({
   port: process.env.PORT ? Number(process.env.PORT) : 3000,
   host: "0.0.0.0"
 });
+// GET /nannies/:id
+app.get("/nannies/:id", async (req, reply) => {
+  const { id } = req.params;
+  const nanny = NANNIES.find(n => n.id === id);
+
+  if (!nanny) {
+    reply.code(404);
+    return { error: "Nanny not found" };
+  }
+
+  return nanny;
+});
